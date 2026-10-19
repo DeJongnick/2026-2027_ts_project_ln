@@ -66,3 +66,16 @@ def scorecard(df: pl.DataFrame, forecasts: dict, reference: str = "RTE raw") -> 
         ((pl.col("global") - ref) / ref * 100).round(1).alias("vs_reference_(%)"),
         pl.col(list(names.values())).round(0),
     )
+
+def scorecard_daily(df: pl.DataFrame, forecasts: dict, reference: str = "RTE raw") -> pl.DataFrame:
+    """MAE and bias (GW) of each daily forecast, one row per forecast, with the same "vs_reference_(%)"."""
+    rows = []
+    for name, col in forecasts.items():
+        m = compute_metrics(df, col, actual_col="target")
+        rows.append({"forecast": name, "MAE": m["MAE"], "bias": m["bias"]})
+    table = pl.DataFrame(rows)
+    ref = table.filter(pl.col("forecast") == reference)["MAE"].item()
+    return table.with_columns(
+        ((pl.col("MAE") - ref) / ref * 100).round(1).alias("vs_reference_(%)"),
+        pl.col("MAE", "bias").round(2),
+    )
