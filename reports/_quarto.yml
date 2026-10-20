@@ -1,0 +1,13 @@
+project:
+  output-dir: output   # report.html and one_pager.pdf
+  post-render: rm -rf output/figures   # copies of figures/, already embedded in the outputs
+  render:              # the notebook in code/ is not part of the Quarto project
+    - report.qmd
+    - one_pager.qmd
+
+lang: en
+jupyter: python3       # kernel of the project venv
+
+execute:
+  echo: false
+  warning: false

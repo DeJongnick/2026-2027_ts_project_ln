@@ -4,3 +4,4 @@ scikit-learn==1.9.1
 statsmodels==0.15.0
 ipykernel==7.4.0
 lightgbm==4.7.0
+quarto-cli==1.10.19

@@ -1,0 +1,72 @@
+---
+title: "Day-ahead load forecast: correct RTE, don't replace it"
+subtitle: "French national consumption · 24 hours of D+1 sent on D at 12:00 · test year Jul 2025 to Jun 2026"
+format:
+  typst:
+    papersize: a4
+    margin:
+      x: 1.4cm
+      y: 1.1cm
+    fontsize: 9pt
+    fig-format: png
+    page-numbering: ""
+---
+
+```{python}
+import sys
+sys.path.insert(0, "code")
+from report_data import *
+
+g_final, g_cand, g_norte = gain[FINAL], gain[CANDIDATE], gain["LightGBM, no RTE"]
+m_rte, m_final, m_cand = (mae[n]["global"] for n in KPI)
+w80 = cov["All hours"]["width_80_(MW)"]
+c80, cc80, cw80 = cov["All hours"]["coverage_80_%"], cov["Cold evening peaks"]["coverage_80_%"], cov["Winter"]["coverage_80_%"]
+```
+
+**Bottom line.** Our models never beat RTE's public forecast on their own (best: `{python} pct(-g_norte)` worse).
+But RTE has been too low by about `{python} gw(-bias_2023, 1)` since 2023, by an amount that depends on the hour.
+Correcting it cuts the error by `{python} pct(g_final)` (LightGBM on RTE's residual, final model) to
+`{python} pct(g_cand)` (hourly debiasing rule).
+
+```{python}
+#| output: asis
+print(kpi_table())
+```
+
+::: {layout-ncol=2}
+![](figures/03_rte_bias.png)
+
+![](figures/04_model_ladder.png)
+:::
+
+### 1. Can we beat RTE, and by how much?
+
+**Yes, by correcting it.** Final model: `{python} mw(m_final)` of MAE vs `{python} mw(m_rte)` for RTE
+(`{python} f"-{g_final:.1f} %"`), and better on every scope, including cold evening peaks
+(`{python} mw(mae[FINAL]["evening_peak_cold_days"])` vs `{python} mw(mae["RTE raw"]["evening_peak_cold_days"])`).
+The rule "RTE minus its mean error at the same hour over the last 28 known days" does even better:
+`{python} mw(m_cand)`. Same ranking on the walk-forward folds used for every choice
+(`{python} mw(FOLDS_MAE[CANDIDATE])`, `{python} mw(FOLDS_MAE[FINAL])`, `{python} mw(FOLDS_MAE["RTE raw"])`).
+
+::: {layout-ncol=2}
+![](figures/06b_interval_coverage.png)
+
+![](figures/07_monthly_error.png)
+:::
+
+### 2. How uncertain, and when does it fail?
+
+The 80 % band is about `{python} gw(w80, 1)` wide and holds `{python} pct(c80)` of test hours, but only
+`{python} pct(cw80)` in winter and `{python} pct(cc80)` on cold evening peaks: **it must be wider on cold days.**
+The model fails when RTE fails (Christmas week, holidays, cold days, some weekends): it removes RTE's usual error,
+not its error of the day.
+
+### 3. What to deploy, and the risks
+
+**Deploy the LightGBM residual now** (selected before the test, with uncertainty bands) and **run the hourly
+debiasing rule alongside it** as a candidate (simpler and better, but no bands yet).
+
+- **RTE published after noon** (assumed, not verified): check RTE's calendar, fall back to our model without RTE.
+- **RTE's bias shifts**: monitor the 7-day bias, alert beyond ±0.5 GW, retrain regularly.
+- **Live vs consolidated data**: replay on archived real-time data before go-live.
+- **Extreme cold, unusual holidays**: manual override and a wider safety margin.

@@ -80,8 +80,13 @@ ntb/
   06_comparison                all models of 01 to 05 and the extension in one table
   extension_rte_debiased       extension (bonus): debiasing RTE's forecast, best result
 reports/
+  report.qmd                   full report of the project (Quarto source of the HTML)
+  one_pager.qmd                one-page summary for management (Quarto source of the PDF)
+  _quarto.yml                  Quarto project: what to render, where, how
   code/07_executive_summary    storyline for management, writes the figures below
+  code/report_data.py          numbers of the two reports, read from data/predictions/
   figures/                     figures of 07_executive_summary (PNG)
+  output/                      report.html and one_pager.pdf, written by quarto render
 ```
 
 Notebooks 01 to 05 follow the same layout: a verdict, then setup, model, results, where it fails, conclusion and an
@@ -100,3 +105,15 @@ pip install -r requirements.txt
 Download `france_electricity_hourly.csv` from the
 [course Google Drive folder](https://drive.google.com/drive/folders/1GY9IOY_7zdZpAm5xfbzSkFa-DunAA3Ag?usp=sharing)
 and put it in `data/`. It already includes RTE's forecast, no other data is needed.
+
+## Reports
+
+`reports/output/report.html` explains the whole work, `reports/output/one_pager.pdf` sums it up on one page. Both are built with
+[Quarto](https://quarto.org), installed by `requirements.txt` (`quarto-cli`, which ships Typst for the PDF, so no
+LaTeX is needed). The numbers are computed at render time from the saved forecasts, so run the notebooks 01 to 05,
+the extension and 07 first, then:
+
+```bash
+cd reports
+quarto render            # output/report.html and output/one_pager.pdf
+```
