@@ -1,8 +1,8 @@
 # Day-ahead forecasting of French electricity consumption
 
 Final project for the Time Series Analysis & Forecasting course. Every day D before 12:00, a utility's trading desk
-needs the consumption of each hour of D+1 to buy energy on the day-ahead market. The goal is to build a forecast for
-that and compare it with RTE's public forecast.
+needs the consumption of each hour of D+1 to buy energy on the day-ahead market. We built a forecast for that and
+compared it with RTE's public forecast.
 
 The manager's three questions:
 
@@ -18,7 +18,68 @@ The manager's three questions:
   (July 2024 to June 2025).
 - **Metric**: MAE in MW, overall, on the evening peak (18-20h) and on the evening peak of cold days (below 5 °C).
 - **Temperature**: the dataset has the observed temperature, not a forecast. Using the temperature of D+1 would mean
-  a perfect weather forecast, so it can only be shown as an upper bound.
+  a perfect weather forecast, so we only show it as an upper bound.
+
+## Results
+
+MAE in MW on the test year:
+
+| Forecast | Global | Evening peak | Cold evening peak | vs RTE raw |
+|---|---|---|---|---|
+| Lag 7d (naive) | 3,425 | 3,612 | 9,225 | +138.0 % |
+| LightGBM, no RTE (temperature of T-2) | 2,010 | 2,036 | 4,466 | +39.7 % |
+| RTE raw | 1,439 | 1,348 | 2,307 | 0 % |
+| LightGBM residual (load - RTE) | 910 | 987 | 1,906 | -36.8 % |
+| **RTE debiased by hour (extension)** | **819** | **943** | **1,528** | **-43.1 %** |
+
+What we learnt along the way:
+
+- **Classical models.** AR, SARIMA, Holt-Winters and SARIMAX work on daily means and stay well behind RTE. The best
+  one is the SARIMAX with T-2 temperature and holidays, at 1.65 GW of daily MAE against 1.16 GW for RTE. Even with
+  the observed temperature it only matches RTE.
+- **Without RTE**, our best model is a LightGBM at 2,010 MW. To beat RTE we have to correct its forecast, not
+  replace it.
+- **RTE's forecast is biased.** It underestimates by about 1,100 MW since 2023, and the bias depends on the hour.
+  The LightGBM residual learns this correction. The extension (`extension_rte_debiased`) shows that a simple rule does it even better:
+  RTE minus its mean error at the same hour over T-29 to T-2. It is also the best on the folds (830 MW vs 860 MW).
+
+## Answers
+
+1. **Yes, by correcting RTE.** The LightGBM residual is 36.8 % below RTE raw on the test, and the hourly debiasing
+   rule 43.1 % below.
+2. **Uncertainty.** Our conformal intervals at 80 % and 95 % are about 2.4 and 4.2 GW wide. They cover 76 % and 94 %
+   of test hours, but only 51 % and 73 % on cold evening peaks, so they need to be wider on cold days. The model
+   fails when RTE fails: Christmas week, holidays, cold days, some weekends.
+3. **Deploy.** The LightGBM residual is our final model (`05`). The hourly debiasing rule is the simplest and best
+   candidate, to be validated in production alongside it. Risks:
+   - We assumed RTE's forecast is published before 12:00 on D. This is not checked yet. If it is late, fall back
+     to the LightGBM without RTE.
+   - RTE's bias can change suddenly. The rule takes about a month (28-day window) to follow it, and the LightGBM
+     needs regular retraining. Monitor the bias.
+   - We used consolidated data, but at the cutoff only real-time data is available.
+   - Extreme cold and unusual holidays are rare in the data. Keep a manual override and a bigger margin there.
+
+## Repository
+
+```
+data/                          france_electricity_hourly.csv (not versioned) and predictions/ (test forecasts, CSV)
+src/watt_forecast/
+  data_preprocessing.py        loading, hourly and daily series, save/load of test forecasts
+  features.py                  holidays, SARIMAX regressors, LightGBM features
+  metrics.py                   MAE, RMSE, MAPE, bias, evening-peak scopes, scorecard
+  models/                      baseline.py (naive, RTE debiasing), ar.py, sarima.py, gbm.py (LightGBM, conformal)
+ntb/
+  00_eda                       exploration of the series and of RTE's error
+  01_baseline                  naive baselines vs RTE
+  02_ar, 03_sarima             daily models: AR, SARIMA, Holt-Winters, SARIMAX
+  04_lightgbm                  hourly LightGBM, walk-forward
+  05_final_model               final model, prediction intervals, failures, deployment risks
+  06_comparison                all models of 01 to 05 in one table
+  extension_rte_debiased       extension (bonus): debiasing RTE's forecast, best result
+```
+
+Notebooks 01 to 05 follow the same layout: a verdict, then setup, model, results, where it fails, conclusion and an
+appendix. Run 01 to 05 before 06, since 06 reads their saved forecasts.
 
 ## Installation
 
