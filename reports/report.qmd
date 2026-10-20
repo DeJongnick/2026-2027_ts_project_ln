@@ -1,6 +1,9 @@
 ---
 title: "Day-ahead forecasting of French electricity consumption"
 subtitle: "Can we beat RTE's public forecast? Full report of the project"
+author:
+  - Léo Bouchand
+  - Nicolas Le Jeune
 date: today
 format:
   html:

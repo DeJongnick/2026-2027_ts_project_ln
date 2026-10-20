@@ -1,6 +1,9 @@
 ---
 title: "Day-ahead load forecast: correct RTE, don't replace it"
 subtitle: "French national consumption · 24 hours of D+1 sent on D at 12:00 · test year Jul 2025 to Jun 2026"
+author:
+  - Léo Bouchand
+  - Nicolas Le Jeune
 format:
   typst:
     papersize: a4
