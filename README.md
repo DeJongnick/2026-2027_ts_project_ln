@@ -51,7 +51,10 @@ What we learnt along the way:
    of test hours, but only 51 % and 73 % on cold evening peaks, so they need to be wider on cold days. The model
    fails when RTE fails: Christmas week, holidays, cold days, some weekends.
 3. **Deploy.** The LightGBM residual is our final model (`05`). The hourly debiasing rule is the simplest and best
-   candidate, to be validated in production alongside it. Risks:
+   candidate, to be validated in production alongside it. The selection rule of `05` (best mean MAE on the folds)
+   picks among the LightGBM models. The debiasing rule came later, as an extension. It does better on the folds
+   (830 vs 860 MW) and on the test, but it has no prediction intervals. That is why we propose it as a candidate
+   to validate in production alongside `05`, not as the final model. Risks:
    - We assumed RTE's forecast is published before 12:00 on D. This is not checked yet. If it is late, fall back
      to the LightGBM without RTE.
    - RTE's bias can change suddenly. The rule takes about a month (28-day window) to follow it, and the LightGBM
@@ -62,7 +65,7 @@ What we learnt along the way:
 ## Repository
 
 ```
-data/                          france_electricity_hourly.csv (not versioned) and predictions/ (test forecasts, CSV)
+data/                          france_electricity_hourly.csv and predictions/ (test forecasts, CSV), both not versioned
 src/watt_forecast/
   data_preprocessing.py        loading, hourly and daily series, save/load of test forecasts
   features.py                  holidays, SARIMAX regressors, LightGBM features
@@ -74,12 +77,12 @@ ntb/
   02_ar, 03_sarima             daily models: AR, SARIMA, Holt-Winters, SARIMAX
   04_lightgbm                  hourly LightGBM, walk-forward
   05_final_model               final model, prediction intervals, failures, deployment risks
-  06_comparison                all models of 01 to 05 in one table
+  06_comparison                all models of 01 to 05 and the extension in one table
   extension_rte_debiased       extension (bonus): debiasing RTE's forecast, best result
 ```
 
 Notebooks 01 to 05 follow the same layout: a verdict, then setup, model, results, where it fails, conclusion and an
-appendix. Run 01 to 05 before 06, since 06 reads their saved forecasts.
+appendix. Run 01 to 05 and the extension before 06, since 06 reads their saved forecasts.
 
 ## Installation
 
