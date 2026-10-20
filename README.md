@@ -79,10 +79,13 @@ ntb/
   05_final_model               final model, prediction intervals, failures, deployment risks
   06_comparison                all models of 01 to 05 and the extension in one table
   extension_rte_debiased       extension (bonus): debiasing RTE's forecast, best result
+reports/
+  code/07_executive_summary    storyline for management, writes the figures below
+  figures/                     figures of 07_executive_summary (PNG)
 ```
 
 Notebooks 01 to 05 follow the same layout: a verdict, then setup, model, results, where it fails, conclusion and an
-appendix. Run 01 to 05 and the extension before 06, since 06 reads their saved forecasts.
+appendix. Run 01 to 05 and the extension before 06 and 07 (in reports/code/), since they read the saved forecasts.
 
 ## Installation
 
